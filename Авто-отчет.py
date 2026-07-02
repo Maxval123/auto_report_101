@@ -32,19 +32,20 @@ def download(url, name):
     except:
         return False
 
-last = max([re.search(r'(\d{8})', f).group(1) for f in os.listdir(save_dir) if re.match(r'101-\d{8}\.rar', f)])
-new_date = (datetime.strptime(last, "%Y%m%d") + relativedelta(months=1)).strftime("%Y%m%d")
+# Определяем актуальную дату
+actual_date = max([re.search(r'(\d{8})', f).group(1) for f in os.listdir(save_dir) if re.match(r'101-\d{8}\.rar', f)])
+new_date = (datetime.strptime(actual_date, "%Y%m%d") + relativedelta(months=1)).strftime("%Y%m%d")
 
 # Скачиваем
 try:
-    # Скачиваем 101 архив
     if not download(f"https://cbr.ru/vfs/credit/forms/101-{new_date}.rar", f"101-{new_date}.rar"):
         raise Exception("101 архив не скачался")
-
-
-except Exception as e: # <--------------------- Вывод try-except при попытке скачивания
+    
+    actual_date = new_date
+    
+except Exception as e:
+    # Если скачивание не удалось, actual_date остается прежним
     print(f"\n❌ НОВЫЕ ДАННЫЕ ЕЩЕ НЕ ПОЯВИЛИСЬ")
-    sys.exit(1)
 
 download("https://cbr.ru/Content/Document/File/115862/obs_tabl20%D1%81.xlsx", "obs_tabl20с.xlsx")
 
@@ -204,8 +205,8 @@ df_final['Применяется'] = df_final['NUM_SC'].astype(str).str[:3].map(
 
 output_folder = Path(r"D:\Downloads\Исходные данные 101") # <------------ Сохранение сырых данных для нас в отдельную папку
 output_folder.mkdir(parents=True, exist_ok=True)
-df_merged.to_csv(output_folder / f"Исходные_данные_{new_date}.csv", index=False, encoding='utf-8-sig')
-df_final.to_csv(output_folder / f"Активные_счета_{new_date}.csv", index=False, encoding='utf-8-sig')
+df_merged.to_csv(output_folder / f"Исходные_данные_{actual_date}.csv", index=False, encoding='utf-8-sig')
+df_final.to_csv(output_folder / f"Активные_счета_{actual_date}.csv", index=False, encoding='utf-8-sig')
 
 
 # ## Данные ОБС
@@ -309,7 +310,7 @@ grouped_with_grey = grouped_with_grey.sort_values(['Дата', 'Рег.н.']).re
 
 # ## +Свод по Топ-банкам
 obs_date = datetime.strptime(obs_melted['Дата'].max().strftime("%Y%m%d"), "%Y%m%d")
-new_date_dt = datetime.strptime(new_date, "%Y%m%d")
+new_date_dt = datetime.strptime(actual_date, "%Y%m%d")
 
 # Флаг: доступны ли данные за новый период в xlsx
 xlsx_available = obs_date and obs_date >= new_date_dt
@@ -509,7 +510,7 @@ else:
 
 # ### Сохраненяем
 
-with pd.ExcelWriter(f'Сводные с приростами_{new_date}.xlsx', engine='openpyxl') as writer: # <---------- Сохранение сводных таблиц
+with pd.ExcelWriter(f'Сводные с приростами_{actual_date}.xlsx', engine='openpyxl') as writer: # <---------- Сохранение сводных таблиц
 
     # Получаем книгу
     workbook = writer.book
